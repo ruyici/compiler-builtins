@@ -1,0 +1,48 @@
+# .github/workflows/riscv64.yml — run rust-lang/compiler-builtins' own CI suite
+# natively on the ruyici self-hosted RISC-V runners (control plane schedules
+# these on riscv64 board nodes via the `ubuntu-24.04-riscv` label).
+name: riscv64
+
+on:
+  pull_request:          # run when a PR is pushed
+  push:
+    branches: [main]
+
+# Only one instance at a time; new pushes cancel in-flight runs.
+concurrency:
+  group: riscv64-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  compiler-builtins:
+    name: compiler-builtins (riscv64, self-hosted)
+    runs-on: ubuntu-24.04-riscv
+    # Self-hosted riscv64 runners are experimental; don't block CI on flakes.
+    continue-on-error: true
+    timeout-minutes: 60
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_TERM_VERBOSE: true
+      RUST_BACKTRACE: full
+      JOB_TARGET: riscv64gc-unknown-linux-gnu
+    steps:
+      - name: Confirm native RISC-V
+        run: |
+          uname -a
+          arch=$(uname -m); test "$arch" = riscv64
+      - uses: actions/checkout@v4
+        with:
+          repository: rust-lang/compiler-builtins
+          ref: main
+          persist-credentials: false
+      - name: Set up deps + Rust (compiler-builtins)
+        run: ./ci/install-test-deps.sh "$JOB_TARGET"
+      - name: Download musl source
+        run: ./ci/update-musl.sh
+      - name: Run compiler-builtins tests (native, no Docker)
+        run: ./ci/run.sh "$JOB_TARGET"
+      - name: Print test logs
+        if: always()
+        run: if [ -f target/test-log.txt ]; then cat target/test-log.txt; fi
+jenkins@dev:~/chatgpt/ruyici-github-app$ 
+
