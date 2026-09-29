@@ -25,6 +25,7 @@ jobs:
       CARGO_TERM_VERBOSE: true
       RUST_BACKTRACE: full
       JOB_TARGET: riscv64gc-unknown-linux-gnu
+      RUN_IN_DOCKER: false
     steps:
       - name: Confirm native RISC-V
         run: |
